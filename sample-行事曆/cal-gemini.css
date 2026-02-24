@@ -1,0 +1,287 @@
+:root {
+    --unit-height: 6px;
+    --hour-height: 36px;
+    --work-bg: #e3f2fd;
+    --work-border: #2196f3;
+    --school-bg: #f3e5f5;
+    --school-border: #9c27b0;
+}
+
+body { font-family: "Microsoft JhengHei", sans-serif; background: #f8f9fa; margin: 0; color: #333; }
+.main-wrapper { display: flex; padding: 20px; gap: 20px; min-height: 100vh; }
+
+/* 側邊欄 */
+.sidebar { 
+    width: 230px; 
+    background: white; 
+    padding: 20px; 
+    border-radius: 12px; 
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    display: flex;
+    flex-direction: column;
+}
+/* 讓顏色選擇器的內容物也變圓形 */
+input[type="color"]::-webkit-color-swatch-wrapper {
+    padding: 0;
+}
+input[type="color"]::-webkit-color-swatch {
+    border: none;
+    border-radius: 50%;
+}
+input[type="color"]::-moz-color-swatch {
+    border: none;
+    border-radius: 50%;
+}
+
+.stat-item { background: #f8f9fa; padding: 5px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; }
+.clear-btn { width: 100%; padding: 10px; background: #ffebee; color: #c62828; border: 1px solid #ffcdd2; cursor: pointer; border-radius: 6px; margin-top: 10px; font-weight: bold; }
+.clear-btn.secondary { background: #fff3e0; color: #e65100; border-color: #ffe0b2; }
+.stats-summary　{ 
+    background: #f8f9fa; 
+    padding: 5px; 
+    border-radius: 8px; 
+    margin-top: auto;
+}
+#monthly-stats {
+    flex-grow: 1;      /* 關鍵：讓清單佔據所有剩餘空間，把下方內容推到底部 */
+    overflow-y: auto;  /* 如果學生太多，清單可以滾動 */
+    margin-bottom: 20px;
+}
+.stats-footer {
+    background: #f8f9fa;
+    padding: 5px;
+    border-radius: 8px;
+    margin-bottom: 5px;
+}
+
+.stats-footer p {
+    margin: 3px 0;
+    font-weight: bold;
+    font-size: 12px;
+    display: flex;
+    justify-content: space-between; /* 讓文字和數字分開左右 */
+}
+
+.stats-footer span {
+    color: #2c3e50;
+    font-size: 14px;
+}
+
+/* 行事曆核心 */
+.calendar-container { 
+    flex-grow: 1; 
+    background: white; 
+    padding: 15px; 
+    border-radius: 12px; 
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+ }
+.schedule-grid { 
+    display: grid; 
+    grid-template-columns: 70px repeat(7, 1fr); 
+    grid-template-rows: 40px repeat(84, var(--unit-height)); 
+    border: 1px solid #eee; 
+    position: relative; 
+    overflow-y: auto; 
+    background: #fff;
+}
+.day-header {
+    display: flex;         /* 使用彈性佈局 */
+    align-items: center;   /* 垂直居中 */
+    justify-content: center; /* 水平居中 */
+    font-weight: bold;
+    background: #2c3e50;
+    color: white;
+    text-align: center;
+    padding: 5px; /* 增加上下間距 */
+    font-size: 12px;
+    line-height: 1.0;
+}
+
+.date-label {
+    font-size: 12px;
+    font-weight: 700;
+    opacity: 0.9;
+    margin-right: 5px;     /* 日期與星期間的空格 */
+    display: block; /* 讓日期獨立佔據一行 */
+}
+
+.time-column { 
+    grid-row: 2 / span 84; 
+    display: flex; 
+    flex-direction: column; 
+    justify-content: center; 
+    border-right: 1px solid #ddd; 
+    font-size: 12px; 
+    color: #78909c; 
+    text-align: center; 
+}
+.time-column div { 
+    height: calc(var(--unit-height)*6);
+    font-size: 12px; 
+    text-align: center; 
+    color: #777; 
+    box-sizing: border-box;
+    display: flex; 
+    align-items: center; 
+    justify-content: center;
+}
+
+.placed-event {
+    display: flex;
+    flex-direction: column; /* 預設垂直排 */
+    justify-content: center;
+    padding: 2px 4px;
+    font-size: 12px;
+    overflow: hidden; /* 防止文字溢出 */
+    line-height: 1.7;
+    border-radius: 4px;
+    color: white !important;
+    transition: all 0.2s;
+    z-index: 10;            /* 確保在背景線上方 */
+    position: relative;     /* 讓 z-index 生效 */
+    border: 1px solid rgba(255,255,255,0.2); /* 增加一點邊框感，讓重疊時看得清楚 */
+    box-sizing: border-box; 
+
+}
+
+/* 當行程高度較小時的處理 (例如 1 小時大約是 6 個 grid rows) */
+/* 你可以根據你的 Row 高度調整這個數值 */
+.placed-event strong {
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis; /* 名字太長顯示... */
+}
+
+.placed-event span {
+    font-size: 11px;
+    opacity: 0.9;
+    white-space: nowrap;
+}
+
+/* 關鍵：高度過小時，強制讓資訊變橫向或縮小 */
+/* 假設 1 小時對應的高度大約是 50-60px 左右 */
+@container (max-height: 50px) {
+    .placed-event {
+        flex-direction: row;
+        align-items: center;
+        gap: 5px;
+    }
+    .placed-event span {
+        display: none; /* 甚至可以隱藏地點圖示，只留姓名 */
+    }
+}
+
+/* 滑鼠移上去時稍微放大，並顯示在最上層 */
+.placed-event:hover {
+    z-index: 100 !important;
+    transform: scale(1.02);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    min-height: fit-content; /* 懸停時長開以顯示內容 */
+}
+.event-work { background: var(--work-bg); border-left: 4px solid var(--work-border); color: #0d47a1; font-size: 10px;}
+.event-school { background: var(--school-bg); border-left: 4px solid var(--school-border); color: #743fb5; line-height: 2; font-size: 11px; }
+.grid-lines { 
+    grid-column: 2 / span 7; 
+    grid-row: 2 / span 84; 
+    background-image: linear-gradient(#f0f0f0 1px, transparent 1px); 
+    background-size: 100% calc(var(--unit-height)*6); pointer-events: none;z-index: 1; }
+
+/* 彈窗 */
+.modal { 
+    display: none; 
+    position: fixed; 
+    z-index: 100; 
+    left: 0; 
+    top: 0; 
+    width: 100%; 
+    height: 100%; 
+    background: rgba(0,0,0,0.5);
+}
+
+.modal-content { 
+    background: white; 
+    margin: 5% auto; 
+    padding: 15px 20px;
+    width: 320px; 
+    border-radius: 12px; 
+    max-height: 90vh;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+}
+
+.modal-content label { 
+    display: block; 
+    margin: 12px 0 4px; 
+    font-weight: bold; 
+    font-size: 14px; 
+}
+
+.modal-content input, .modal-content select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
+.time-row { display: flex; gap: 10px; }
+.save-btn { 
+    background: #098579; 
+    color: white; 
+    border: none; 
+    flex-grow: 1; 
+    padding: 10px; 
+    border-radius: 6px; 
+    cursor: pointer; 
+    font-weight: bold; 
+}
+/* 右下角懸浮控制區 */
+.floating-controls {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    display: flex;
+    gap: 10px;
+    z-index: 1000;
+}
+
+.floating-controls button {
+    padding: 12px 18px;
+    border-radius: 50px; /* 膠囊狀按鈕 */
+    border: none;
+    background-color: #ffffff;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+    cursor: pointer;
+    font-size: 16px;
+    transition: all 0.2s ease;
+    border: 1px solid #eee;
+}
+
+.floating-controls button:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+    background-color: #f8f9fa;
+}
+
+.floating-controls .today-btn {
+    background-color: #2c3e50;
+    color: white;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+.floating-controls .today-btn:hover {
+    background-color: #34495e;
+}
+
+.color-circle {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: transform 0.2s, border-color 0.2s;
+}
+
+.color-circle:hover {
+    transform: scale(1.2);
+}
+
+.color-circle.active {
+    border-color: #333;
+    transform: scale(1.1);
+    box-shadow: 0 0 5px rgba(0,0,0,0.3);
+}
