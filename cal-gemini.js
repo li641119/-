@@ -8,6 +8,12 @@ const presetColors = [
     '#ffc0c7', '#f5c5ff', '#b2ceff', '#c4cbff'
 ];
 
+window.updateCalendarUI = function(cloudData) {
+    courses = cloudEvents; // 將雲端抓到的資料存入本地變數 courses
+    renderAll();         // 執行你原本的渲染函式
+    console.log("雲端資料已同步並重新渲染");
+};
+
 // --- 1. 初始化 ---
 document.addEventListener('DOMContentLoaded', () => {
     updateWeekDates();
@@ -127,9 +133,6 @@ function saveFromModal() {
     const end = document.getElementById('m-end').value;
     const isRepeating = document.getElementById('m-repeat').checked;
     const eventColor = document.getElementById('m-color').value;
-
-    if (!name || !start || !end) return alert("請填寫完整資訊");
-
     const startRow = timeToRow(start);
     const endRow = timeToRow(end);
     const duration = (endRow - startRow) * 10;
@@ -147,6 +150,19 @@ function saveFromModal() {
     const dayHeaders = document.querySelectorAll('.day-header');
     const targetHeader = Array.from(dayHeaders).find(h => h.dataset.day === (day === "8" ? "0" : (parseInt(day)-1).toString()) );
     const dateStr = targetHeader ? targetHeader.dataset.fullDate : new Date().toLocaleDateString('en-CA');
+    const eventId = editingId || Date.now(); 
+    const courseData = { 
+        id: eventId, 
+        name, loc, day, type, 
+        startRow: timeToRow(start), // 直接在這裡計算 Row
+        endRow: timeToRow(end),
+        start, end, 
+        duration: (timeToRow(end) - timeToRow(start)) * 10, 
+        date: dateStr, 
+        isRepeating, 
+        color: eventColor, 
+        exceptions: editingId ? (courses.find(c => c.id === editingId)?.exceptions || []) : []
+    };
 
     if (editingId) {
         // 【編輯模式】
@@ -165,7 +181,9 @@ function saveFromModal() {
         courses.push(newCourse);
     }
     
-    renderAndSave();
+    if (!name || !start || !end) return alert("請填寫完整資訊");
+
+    window.uploadEvent(courseData);
     closeModal();
 }
 
@@ -322,16 +340,23 @@ function drawEvent(course, container, dStr, col) {
             if (action === "1") {
                 if (!course.exceptions) course.exceptions = [];
                 course.exceptions.push(dStr);
-                renderAndSave();
+                window.uploadEvent(course);
             } else if (action === "2") {
                 if (confirm(`確定要永久刪除 [${course.name}] 的所有重複行程嗎？`)) {
                     courses = courses.filter(x => x.id !== course.id);
-                    renderAndSave();
+                    window.removeEventFromCloud(course.id);
                 }
             }
         }
     };
     container.appendChild(div);
+}
+
+function clearWorkData() {
+    if (confirm("確定要清空雲端所有行程嗎？")) {
+        // 遍歷所有行程進行雲端刪除
+        courses.forEach(c => window.removeEventFromCloud(c.id));
+    }
 }
 
 // --- 6. 側邊欄渲染 ---
@@ -340,11 +365,11 @@ function renderSidebar(studentStats) {
     if (!statsDiv) return;
     statsDiv.innerHTML = "";
     
-const entries = Object.entries(studentStats).sort((a, b) => b[1].mins - a[1].mins);    
-if (entries.length === 0) { 
-        statsDiv.innerHTML = "<p style='color:#888; text-align:center; margin-top:20px;'>本月尚無教球紀錄</p>"; 
-        return; 
-    }
+    const entries = Object.entries(studentStats).sort((a, b) => b[1].mins - a[1].mins);    
+    if (entries.length === 0) { 
+            statsDiv.innerHTML = "<p style='color:#888; text-align:center; margin-top:20px;'>本月尚無教球紀錄</p>"; 
+            return; 
+        }
 
     entries.forEach(([name, data]) => {
         const student = courses.find(c => c.name === name);
@@ -383,8 +408,11 @@ if (entries.length === 0) {
 }
 
 function updateStudentColor(name, newColor) {
-    courses = courses.map(c => c.name === name ? { ...c, color: newColor } : c);
-    renderAndSave();
+    // 這裡原本呼叫 renderAndSave()，請改為更新雲端
+    courses.filter(c => c.name === name).forEach(c => {
+        c.color = newColor;
+        window.uploadEvent(c);
+    });
 }
 
 // --- 7. 日期與儲存 ---
@@ -422,8 +450,23 @@ function toggleCustomLoc() {
 }
 
 function saveToStorage() { localStorage.setItem('coach_data_v3', JSON.stringify(courses)); }
+// 在 cal-gemini.js 裡新增
+window.updateCalendarUI = function(cloudEvents) {
+    // 1. 把全域的 events 變數替換成雲端抓下來的資料
+    events = cloudEvents; 
+    
+    // 2. 呼叫你原本渲染行事曆的函式 (假設叫 renderCalendar)
+    if (typeof renderCalendar === "function") {
+        renderCalendar();
+    }
+    
+    // 3. 呼叫你原本計算統計數字的函式 (假設叫 updateStats)
+    if (typeof updateStats === "function") {
+        updateStats();
+    }
+};
+
 function loadData() {
-    const data = localStorage.getItem('coach_data_v3');
-    if (data) { courses = JSON.parse(data); renderAll(); }
+    console.log("正在連線至雲端資料庫...");
 }
-function renderAndSave() { renderAll(); saveToStorage(); }
+function renderAndSave() { renderAll();}

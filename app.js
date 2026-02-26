@@ -1,12 +1,8 @@
 // app.js
-
-// --- 第一段：導入工具 ---
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js";
-import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-analytics.js";
-import { getFirestore, collection, addDoc, onSnapshot, query, orderBy } 
+import { getFirestore, collection, addDoc, onSnapshot, query, setDoc, doc, deleteDoc, getDocs } 
 from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
 
-// --- 第二段：你的 Firebase 設定 ---
 const firebaseConfig = {
     apiKey: "AIzaSyCvtWTmqmJt10icRtFRWg58SWf4JE1hXmc",
     authDomain: "calendar-2026-5ba8e.firebaseapp.com",
@@ -17,11 +13,35 @@ const firebaseConfig = {
     measurementId: "G-0EP154JP2Z"
 };
 
-// --- 第三段：初始化 ---
 const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
-const db = getFirestore(app); // 這就是你要用來操作資料庫的變數
+const db = getFirestore(app);
 
-// --- 下方開始寫你原本網頁的邏輯 ---
-// 例如：按鈕點擊事件、處理待辦清單的程式碼...
-console.log("Firebase 已經成功連線！");
+// --- 導出功能給 cal-gemini.js 使用 ---
+
+// 1. 上傳單一行程
+window.uploadEvent = async (eventData) => {
+    try {
+        const eventId = eventData.id.toString(); // 轉為字串確保格式一致
+        await setDoc(doc(db, "events", eventId), eventData);
+    } catch (e) {
+        console.error("同步失敗:", e);
+    }
+};
+
+// 2. 刪除單一行程
+window.removeEventFromCloud = async (eventId) => {
+    await deleteDoc(doc(db, "events", eventId));
+};
+
+// 3. 監聽雲端所有變化 (核心)
+onSnapshot(collection(db, "events"), (snapshot) => {
+    const cloudEvents = [];
+    snapshot.forEach((doc) => cloudEvents.push(doc.data()));
+    
+    // 這裡通知你的 cal-gemini.js 更新畫面
+    if (window.updateCalendarUI) {
+        window.updateCalendarUI(cloudEvents);
+    }
+});
+
+console.log("Firebase 雲端模組已就緒");
